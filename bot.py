@@ -13,6 +13,9 @@ import logging
 from datetime import datetime, timedelta
 #import telegramcalendar
 
+from secret_santa.adminka_secret_santa.models import User_telegram
+from secret_santa.adminka_secret_santa.models import Game_in_Santa
+
 states_database = {}
 
 def chunks_generators(buttons, chunks_number):
