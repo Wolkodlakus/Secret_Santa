@@ -9,9 +9,10 @@ class Game_in_Santa(models.Model):
         on_delete=models.PROTECT,
     )
     id_game = models.IntegerField(
-        verbose_name='номер игры'
+        verbose_name='ID игры',
+        default=0
     )
-    name = models.TextField(
+    name_game = models.TextField(
         verbose_name='Название игры',
     )
     price_range = models.TextField(
@@ -54,12 +55,15 @@ class User_telegram(models.Model):
     telephone_number = models.CharField(max_length=12) #Заменить?
     vishlist_user = models.TextField(
         verbose_name='Вишлист пользователя',
+        blank=True,
     )
     interests_user = models.TextField(
         verbose_name='Интересы пользователя',
+        blank=True,
     )
     wishes_user = models.TextField(
         verbose_name='Пожелания пользователя',
+        blank=True,
     )
     games = models.ManyToManyField(Game_in_Santa, blank=True)
 

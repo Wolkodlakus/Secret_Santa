@@ -56,6 +56,8 @@ def save_new_game(context):
     game.organizer = User_telegram.objects.get(telephone_number=context.user_data['creator_telephone_number'])
     game.save()
 
+
+
 def chunks_generators(buttons, chunks_number):
     for button in range(0, len(buttons), chunks_number):
         yield buttons[button: button + chunks_number]
