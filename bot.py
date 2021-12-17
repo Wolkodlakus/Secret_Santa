@@ -11,6 +11,13 @@ import phonenumbers
 import random
 from datetime import datetime
 
+from secret_santa.adminka_secret_santa.models import Game_in_Santa, User_telegram
+import django
+from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
+
+os.environ['DJANGO_SETTINGS_MODULE'] = 'secret_santa.secret_santa.settings'
+django.setup()
+
 states_database = {}
 
 
@@ -24,6 +31,30 @@ def create_test_game(context):
     context.user_data['departure_date'] = '15.01.2022'
     context.user_data['game_id'] = 123456
 
+def load_to_context(id_game,context):
+    try:
+        game = Game_in_Santa.objects.get(id_game=id_game)
+        context.user_data['game_id'] = id_game
+        context.user_data['creator_telephone_number'] = game.organizer.organizer.telephone_number
+        context.user_data['creator_first_name'] = game.organizer.name
+        context.user_data['creator_username'] = game.organizer.username
+        context.user_data['game_name'] = game.name
+        context.user_data['cost_limit'] = game.price_range
+        context.user_data['registration_period'] = game.last_day
+        context.user_data['departure_date'] = game.draw_day
+
+    except ObjectDoesNotExist:
+        pass
+
+def save_new_game(context):
+    game = Game_in_Santa.objects.create(id_game=id_game)
+    game.id_game = context.user_data['game_id']
+    game.name = context.user_data['game_name']
+    game.price_range = context.user_data['cost_limit']
+    game.last_day = context.user_data['registration_period']
+    game.draw_day = context.user_data['departure_date']
+    game.organizer = User_telegram.objects.get(telephone_number=context.user_data['creator_telephone_number'])
+    game.save()
 
 def chunks_generators(buttons, chunks_number):
     for button in range(0, len(buttons), chunks_number):
@@ -167,6 +198,27 @@ def check_game(update, context):
     user_message = update.message.text
     print(int(user_message))
     print(int(context.user_data.get('game_id')))
+    """try:
+        id_game = Game_in_Santa.id_game.objects.get(int(user_message))
+        buttons = ['Продолжить']
+        markup = keyboard_maker(buttons, 1)
+        context.bot.send_message(
+            chat_id=chat_id,
+            text=' Вы присоединились к игре! Поздравляем!',
+            reply_markup=markup,
+        )
+        context.user_data['game_id'] = id_game
+        return 'SHOW_GAME_INFO'
+    except ObjectDoesNotExist:
+        buttons = ['Создать игру', 'Вступить в игру']
+        markup = keyboard_maker(buttons, 2)
+        context.bot.send_message(
+            chat_id=chat_id,
+            text='Игры с таким идентификатором не существует',
+            reply_markup=markup,
+        )
+        return 'SELECT_BRANCH'
+    """
     if int(user_message) == int(context.user_data.get('game_id')): #проверка есть ли игра с таким id
         buttons = ['Продолжить']
         markup = keyboard_maker(buttons, 1)
@@ -189,6 +241,7 @@ def check_game(update, context):
 
 def show_game_info(update, context):
     chat_id = update.effective_message.chat_id
+
     context.bot.send_message(
         chat_id=chat_id,
         text=f'Название игры: {context.user_data["game_name"]}\n'

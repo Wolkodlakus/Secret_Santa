@@ -8,15 +8,23 @@ class Game_in_Santa(models.Model):
         verbose_name='Организатор игры',
         on_delete=models.PROTECT,
     )
-    name_game = models.TextField(
-        verbose_name='Название игры'
+    id_game = models.IntegerField(
+        verbose_name='номер игры'
     )
-
+    name = models.TextField(
+        verbose_name='Название игры',
+    )
     price_range = models.TextField(
         verbose_name='Диапазон стоимости подарка',
     )
-    last_day_and_time_of_registration = models.DateTimeField(
+    last_day = models.TextField(
+        verbose_name='Дата окончания регистрации',
+    )
+    last_day_and_time_of_registration = models.TextField(
         verbose_name='Последний день и час регистрации'
+    )
+    draw_day = models.TextField(
+        verbose_name='Дата раздачи подарков'
     )
     draw_time = models.DateTimeField(
         verbose_name='Дата и время раздачи подарков'
@@ -39,6 +47,9 @@ class User_telegram(models.Model):
     )
     last_name = models.TextField(
         verbose_name='Фамилия пользователя',
+    )
+    username = models.TextField(
+        verbose_name='Никнейм пользователя',
     )
     telephone_number = models.CharField(max_length=12) #Заменить?
     vishlist_user = models.TextField(
