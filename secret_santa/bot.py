@@ -1,5 +1,7 @@
+import logging
 from dotenv import load_dotenv
 import os
+import sys
 import telegram
 from telegram import Update
 from telegram.ext import Filters
@@ -11,12 +13,15 @@ import phonenumbers
 import random
 from datetime import datetime
 
-from secret_santa.adminka_secret_santa.models import Game_in_Santa, User_telegram
 import django
-from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
 
-os.environ['DJANGO_SETTINGS_MODULE'] = 'secret_santa.secret_santa.settings'
+os.environ['DJANGO_SETTINGS_MODULE'] = 'secret_santa.settings'
 django.setup()
+from adminka_secret_santa.models import Game_in_Santa, User_telegram
+
+
+
+logger = logging.getLogger('logger_main')
 
 states_database = {}
 
@@ -492,7 +497,12 @@ def handle_user_reply(update: Update, context: CallbackContext):
 def main():
     load_dotenv()
     token = os.getenv("TELEGRAM_BOT_TOKEN")
-
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    logger.info(f'Start')
+    
     updater = Updater(token)
     dispatcher = updater.dispatcher
     dispatcher.add_handler(CommandHandler('start', handle_user_reply))
