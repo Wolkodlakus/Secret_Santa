@@ -380,7 +380,8 @@ def get_cost_limit(update, context):
     context.bot.send_message(
         chat_id=chat_id,
         text='Введите дату окончания регистрации участников'
-             ' (до 12.00 МСК) или нажмите одну из кнопок',
+             ' (до 12.00 МСК) в формате ДД-ММ-ГГГГ, например 31-12-2021',
+        reply_markup=telegram.ReplyKeyboardRemove()
     )
     return 'GET_REGISTRATION_PERIOD'
 
@@ -391,10 +392,20 @@ def get_registration_period(update, context):
 
     try:
         registration_period = datetime.strptime(user_message, '%d-%m-%Y')
+
+        if registration_period < datetime.now():
+            context.bot.send_message(
+                chat_id=chat_id,
+                text='Прошлая или текущая дата не может быть установлена!\n'
+                     'Введи дату в формате ДД-ММ-ГГГГ, например 31-12-2021',
+            )
+            return 'GET_REGISTRATION_PERIOD'
+
         context.user_data['registration_period'] = registration_period
         context.bot.send_message(
             chat_id=chat_id,
-            text='Дата отправки подарка?',
+            text='Дата отправки подарка?\n'
+                 'Введи дату в формате ДД-ММ-ГГГГ, например 01-01-2022',
         )
         return 'GET_DEPARTURE_DATE'
 
@@ -433,7 +444,7 @@ def get_departure_date(update, context):
         context.bot.send_message(
             chat_id=chat_id,
             text='Неверная дата!\n'
-                 'Введи дату в формате ДД-ММ-ГГГГ, например - 01-01-2022',
+                 'Введи дату в формате ДД-ММ-ГГГГ, например 01-01-2022',
         )
         return 'GET_DEPARTURE_DATE'
 
