@@ -79,6 +79,15 @@ def keyboard_maker(buttons, number):
 def start(update, context):
     chat_id = update.effective_message.chat_id
     create_test_game(context)
+    p, _ = User_telegram.objects.get_or_create(
+        external_id = chat_id,
+        defaults = {
+            'name': '',
+            'last_name': '',
+            'username': '',
+            'telephone_number': ''
+        }
+    )    
     game_id = update.message.text[7:]
     if game_id:
         print('game_id', game_id)
@@ -451,8 +460,10 @@ def get_departure_date(update, context):
 
 def create_registration_link(update, context):
     chat_id = update.effective_message.chat_id
+    # TODO список game_id брать из модели
     game_id = random.randint(111111, 999999)
-    registration_link = f'https://t.me/secret_santa_devman_bot?start={game_id}'
+
+    registration_link = f'{context.bot["link"]}?start={game_id}'
 
     buttons = ['Создать игру', 'Вступить в игру']
     markup = keyboard_maker(buttons, 2)
