@@ -503,7 +503,7 @@ def create_registration_link(update, context):
     chat_id = update.effective_message.chat_id
     # TODO список game_id брать из модели
     #game_id = random.randint(111111, 999999)
-    if Game_in_Santa.objects.all() in None:
+    if not Game_in_Santa.objects.all():
         game_id = 100000
     else:
         game_id = Game_in_Santa.objects.all().last().id_game + 1
@@ -612,15 +612,20 @@ def Toss_up_game(id_game):
     game = Game_in_Santa.objects.get(id_game=id_game)
     users = User_telegram.objects.filter(games__id_game=id_game)
     random.shuffle(users)
+    toss_up_list = []
     toss_up = Toss_up.objects.add(
         game=game
     )
     for number_current_user in users[:-1]:
         toss_up.donators_set.add(users[number_current_user])
         toss_up.donees_set.add(users[number_current_user+1])
+        toss_up_list.append([users[number_current_user].external_id, users[number_current_user+1].external_id])
     toss_up.donators_set.add(users[-1])
     toss_up.donees_set.add(users[1])
+    toss_up_list.append([users[-1].external_id, users[1].external_id])
+    send_santa_massage(toss_up_list)
     toss_up.save()
+
 
 
 class Command(BaseCommand):
