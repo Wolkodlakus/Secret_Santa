@@ -1,27 +1,37 @@
 import logging
 from dotenv import load_dotenv
 import os
+import re
 import sys
 import telegram
-from telegram import Update
+from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove, KeyboardButton
+from telegram.ext import ConversationHandler
+from telegram.utils.request import Request
 from telegram.ext import Filters
 from telegram.ext import CallbackContext
 from telegram.ext import Updater
-from telegram.ext import CommandHandler, MessageHandler, CallbackQueryHandler
+from telegram.ext import CommandHandler, MessageHandler, CallbackQueryHandler, MessageHandler
 from telegram import ReplyKeyboardMarkup
+from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
 import phonenumbers
+from random import randint
+from typing import Optional
 import random
 from datetime import datetime
+from django.core.management.base import BaseCommand
+#import django
 
-import django
+from secret_santa.adminka_secret_santa.models import Game_in_Santa, User_telegram, Wishlist, Toss_up, Interest
 
 os.environ['DJANGO_SETTINGS_MODULE'] = 'secret_santa.settings'
-django.setup()
-from adminka_secret_santa.models import Game_in_Santa, User_telegram
-
+#django.setup()
+from django.core.management.base import BaseCommand
 
 
 logger = logging.getLogger('logger_main')
+
+load_dotenv()
+TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 
 states_database = {}
 
@@ -52,14 +62,18 @@ def load_to_context(id_game,context):
         pass
 
 def save_new_game(context):
-    game = Game_in_Santa.objects.create(id_game=id_game)
-    game.id_game = context.user_data['game_id']
+    game = Game_in_Santa.objects.create(id_game=context.user_data['game_id'])
     game.name = context.user_data['game_name']
     game.price_range = context.user_data['cost_limit']
     game.last_day = context.user_data['registration_period']
     game.draw_day = context.user_data['departure_date']
     game.organizer = User_telegram.objects.get(telephone_number=context.user_data['creator_telephone_number'])
     game.save()
+
+
+def save_user (update,context):
+    chat_id = update.effective_message.chat_id
+    user = User_telegram.objects.get(external_id= chat_id)
 
 
 
@@ -193,6 +207,7 @@ def get_letter_for_santa(update, context):
         reply_markup=markup,
     )
     print(context.user_data)
+
     return 'SELECT_BRANCH'
 
 
@@ -516,6 +531,7 @@ def handle_user_reply(update: Update, context: CallbackContext):
     states_database.update({chat_id: next_state})
 
 
+
 def main():
     load_dotenv()
     token = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -534,5 +550,63 @@ def main():
     updater.start_polling()
 
 
-if __name__ == '__main__':
-    main()
+#if __name__ == '__main__':
+#    main()
+
+def send_santa_massage(toss_up_list):
+    """lottery_list = [[1041573069, 293277450], [1041573069, 386453509], [1041573069, 386453509]]
+       Список списков из chat_id
+       Первый chat_id получател сообщения
+       Второй chat_id кому дарить подарок
+    """
+    for users in toss_up_list:
+        user_1, user_2 = users
+        user_2 = User_telegram.objects.get(external_id=user_2)
+        text = f"""
+        Жеребьевка проведена! Тебе выпал {user_2.username}
+        Телефон: {user_2.telephone_number}
+        Вишлист: {user_2.wishlist_user}
+        """
+        #bot.send_message(chat_id=user_1, text=text)
+
+def cancel(update, _):
+    user = update.message.from_user
+    logger.info(f'Пользователь {user.first_name} закрыл разговор.')
+    update.message.reply_text(
+        'Передумаешь - пиши',
+        reply_markup=ReplyKeyboardRemove()
+    )
+    return ConversationHandler.END
+
+
+class Command(BaseCommand):
+    """Start the bot."""
+    help = "Телеграм-бот Тайный Санта"
+
+    def handle(self, *args, **options):
+        updater = Updater(token=TELEGRAM_BOT_TOKEN)
+        dispatcher = updater.dispatcher
+        conv_handler = ConversationHandler(
+            entry_points=[CommandHandler('start', start)],
+            states={
+                'GET_CREATOR_CONTACT': [MessageHandler(Filters.text, get_creator_contact)],
+                'GET_PLAYER_CONTACT': [MessageHandler(Filters.text, get_player_contact)],
+                'GET_GAME_NAME': [MessageHandler(Filters.text, get_game_name)],
+                'GET_COST_LIMIT': [MessageHandler(Filters.text, get_cost_limit)],
+                'GET_REGISTRATION_PERIOD': [MessageHandler(Filters.text, get_registration_period)],
+                'GET_DEPARTURE_DATE': [MessageHandler(Filters.text, get_departure_date)],
+                'CREATE_REGISTRATION_LINK': [MessageHandler(Filters.text, create_registration_link)],
+                'SELECT_BRANCH': [MessageHandler(Filters.text, select_branch)],
+                'CHECK_GAME': [MessageHandler(Filters.text, check_game)],
+                'GET_PLAYER_NAME': [MessageHandler(Filters.text, get_player_name)],
+                'GET_WISH_LIST': [MessageHandler(Filters.text, get_wish_list)],
+                'GET_LETTER_FOR_SANTA': [MessageHandler(Filters.text, get_letter_for_santa)],
+                'SHOW_GAME_INFO': [MessageHandler(Filters.text, show_game_info)],
+            },
+            fallbacks=[CommandHandler('cancel', cancel)],
+        )
+
+        dispatcher.add_handler(conv_handler)
+
+        updater.start_polling()
+        updater.idle()
