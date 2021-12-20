@@ -74,8 +74,8 @@ def save_new_game(context):
 def save_creator_user(update,context):
     chat_id = update.effective_message.chat_id
     user = User_telegram.objects.get(external_id= chat_id)
-    for item in context.user_data['wish_list']:
-        user.wishlist.create(name=item)
+    #for item in context.user_data['wish_list']:
+    #    user.wishlist.create(name=item)
 
     user.letter = context.user_data['letter']
     user.name = context.user_data['creator_first_name']
