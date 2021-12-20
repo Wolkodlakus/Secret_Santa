@@ -16,7 +16,11 @@ class Game_in_SantaADMIN(admin.ModelAdmin):
 
 @admin.register(Toss_up)
 class Toss_upADMIN(admin.ModelAdmin):
-    list_display = ('game', 'donator', 'donee')
+    list_display = ('game', 'get_donators', 'get_donees')
+    def get_donators(self, obj):
+        return "\n".join([p.donators for p in obj.donators.all()])
+    def get_donees(self, obj):
+        return "\n".join([p.donees for p in obj.donees.all()])
 
 @admin.register(Wishlist)
 class WishlistADMIN(admin.ModelAdmin):
