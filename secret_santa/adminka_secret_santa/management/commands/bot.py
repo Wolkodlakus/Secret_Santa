@@ -503,7 +503,7 @@ def create_registration_link(update, context):
     chat_id = update.effective_message.chat_id
     # TODO список game_id брать из модели
     #game_id = random.randint(111111, 999999)
-    if Game_in_Santa.objects.all().last() in None:
+    if Game_in_Santa.objects.all() in None:
         game_id = 100000
     else:
         game_id = Game_in_Santa.objects.all().last().id_game + 1
