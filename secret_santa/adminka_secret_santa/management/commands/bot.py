@@ -77,7 +77,7 @@ def save_creator_user(update,context):
     #for item in context.user_data['wish_list']:
     #    user.wishlist.create(name=item)
 
-    user.letter = context.user_data['letter']
+    #user.letter = context.user_data['letter']
     user.name = context.user_data['creator_first_name']
     user.user_name = context.user_data['creator_username']
     user.telephone_number = context.user_data['creator_telephone_number']
