@@ -18,15 +18,15 @@ from random import randint
 from typing import Optional
 import random
 from datetime import datetime
-from django.core.management.base import BaseCommand
+
 #import django
 
-from secret_santa.adminka_secret_santa.models import Game_in_Santa, User_telegram, Wishlist, Toss_up, Interest
 
-os.environ['DJANGO_SETTINGS_MODULE'] = 'secret_santa.settings'
+
+#os.environ['DJANGO_SETTINGS_MODULE'] = 'secret_santa.settings'
 #django.setup()
 from django.core.management.base import BaseCommand
-
+from adminka_secret_santa.models import Game_in_Santa, User_telegram, Wishlist, Toss_up, Interest
 
 logger = logging.getLogger('logger_main')
 
