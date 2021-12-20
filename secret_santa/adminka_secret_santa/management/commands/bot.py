@@ -608,6 +608,20 @@ def cancel(update, _):
     )
     return ConversationHandler.END
 
+def Toss_up_game(id_game):
+    game = Game_in_Santa.objects.get(id_game=id_game)
+    users = User_telegram.objects.filter(games__id_game=id_game)
+    random.shuffle(users)
+    toss_up = Toss_up.objects.add(
+        game=game
+    )
+    for number_current_user in users[:-1]:
+        toss_up.donators_set.add(users[number_current_user])
+        toss_up.donees_set.add(users[number_current_user+1])
+    toss_up.donators_set.add(users[-1])
+    toss_up.donees_set.add(users[1])
+    toss_up.save()
+
 
 class Command(BaseCommand):
     """Start the bot."""

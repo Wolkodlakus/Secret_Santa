@@ -124,13 +124,13 @@ class Toss_up(models.Model):
         null=True,
         verbose_name="Игра в Тайного Санту"
     )
-    donator = models.OneToOneField(
+    donators = models.ManyToManyField(
         User_telegram,
         on_delete=models.CASCADE,
         related_name="donator",
         verbose_name="Кто дарит"
     )
-    donee = models.OneToOneField(
+    donees = models.ManyToManyField(
         User_telegram,
         on_delete=models.CASCADE,
         related_name="whom",
