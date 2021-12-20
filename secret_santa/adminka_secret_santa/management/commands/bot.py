@@ -71,6 +71,11 @@ def save_new_game(context):
     game.save()
 
 
+def save_user (update,context):
+    chat_id = update.effective_message.chat_id
+    user = User_telegram.objects.get(external_id= chat_id)
+
+
 
 def chunks_generators(buttons, chunks_number):
     for button in range(0, len(buttons), chunks_number):
@@ -202,6 +207,7 @@ def get_letter_for_santa(update, context):
         reply_markup=markup,
     )
     print(context.user_data)
+
     return 'SELECT_BRANCH'
 
 

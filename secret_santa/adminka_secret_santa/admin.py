@@ -5,7 +5,7 @@ from .models import User_telegram, Game_in_Santa, Toss_up, Wishlist
 
 @admin.register(User_telegram)
 class User_telegramADMIN(admin.ModelAdmin):
-    list_display = ('external_id','name','last_name','username', 'phone')
+    list_display = ('external_id','name','last_name','username', 'telephone_number')
     form = User_telegramForm
 
 @admin.register(Game_in_Santa)

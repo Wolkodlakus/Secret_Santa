@@ -107,6 +107,7 @@ class User_telegram(models.Model):
         blank=True,
         verbose_name='Игры пользователя'
     )
+    letter = models.TextField("Письмо Санте", blank=True)
 
     def __str__(self):
         return f'#{self.external_id} {self.name} {self.last_name} '

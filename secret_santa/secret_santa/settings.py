@@ -12,12 +12,9 @@ https://docs.djangoproject.com/en/4.0/ref/settings/
 import os
 
 from pathlib import Path
-import dj_database_url
+#import dj_database_url
 
-from environs import Env
 
-env = Env()
-env.read_env()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -30,7 +27,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-vgvmatz%%om1*_nqzw%$bj=!ozqmh5%#(44t-^63a5bdp8h2%c'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env.bool('DEBUG', True)
+DEBUG = True
 
 ALLOWED_HOSTS = ['127.0.0.1', 'santa.spin-one.ru']
 

@@ -11,8 +11,8 @@ class User_telegramForm(forms.ModelForm):
             'name',
             'last_name',
             'telephone_number',
-            'vishlist_user',
-            'interests_user',
+            'wishlist_user',
+            'interest_user',
             'wishes_user',
         )
         widgets = {
