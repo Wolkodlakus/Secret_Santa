@@ -71,9 +71,34 @@ def save_new_game(context):
     game.save()
 
 
-def save_user (update,context):
+def save_creator_user(update,context):
     chat_id = update.effective_message.chat_id
     user = User_telegram.objects.get(external_id= chat_id)
+    for item in context.user_data['wish_list']:
+        user.wishlist.create(name=item)
+
+    user.letter = context.user_data['letter']
+    user.name = context.user_data['creator_first_name']
+    user.user_name = context.user_data['creator_username']
+    user.telephone_number = context.user_data['creator_telephone_number']
+    #user.interest_user =
+    #user.wishes_user =
+    user.save()
+
+def save_player_user (update,context):
+    chat_id = update.effective_message.chat_id
+    user = User_telegram.objects.get(external_id= chat_id)
+    for item in context.user_data['wish_list']:
+        user.wishlist.create(name=item)
+
+    user.letter = context.user_data['letter']
+    user.name = context.user_data['player_first_name']
+    user.user_name = context.user_data['player_username']
+    user.telephone_number = context.user_data['player_telephone_number']
+    user.games.objects.add(Game_in_Santa.objects.filter(id_game=context.user_data['game_id']))
+    #user.interest_user =
+    #user.wishes_user =
+    user.save()
 
 
 
@@ -113,6 +138,7 @@ def start(update, context):
             text=' Вы присоединились к игре! Поздравляем!',
             reply_markup=markup,
         )
+
         return 'SHOW_GAME_INFO'
     chat_id = update.effective_message.chat_id
 
@@ -182,7 +208,7 @@ def get_wish_list(update, context):
         )
         return 'GET_LETTER_FOR_SANTA'
     context.user_data['wish_list'].append(user_message)
-    print(context.user_data['wish_list'])
+    #print(context.user_data['wish_list'])
     buttons = ['Завершить']
     markup = keyboard_maker(buttons, 1)
     context.bot.send_message(
@@ -229,7 +255,7 @@ def check_game(update, context):
     user_message = update.message.text
     print(int(user_message))
     print(int(context.user_data.get('game_id')))
-    """try:
+    try:
         id_game = Game_in_Santa.id_game.objects.get(int(user_message))
         buttons = ['Продолжить']
         markup = keyboard_maker(buttons, 1)
@@ -268,7 +294,7 @@ def check_game(update, context):
             reply_markup=markup,
         )
         return 'SELECT_BRANCH'
-
+    """
 
 def show_game_info(update, context):
     chat_id = update.effective_message.chat_id
@@ -330,7 +356,7 @@ def get_creator_contact(update, context):
         text='Введите название игры',
         reply_markup=telegram.ReplyKeyboardRemove(),
     )
-
+    save_creator_user(update,context)
     return 'GET_GAME_NAME'
 
 
@@ -374,7 +400,7 @@ def get_player_contact(update, context):
         text='Введите ваше имя в игре или нажмите кнопку',
         reply_markup=markup,
     )
-
+    save_player_user(update,context)
     return 'GET_PLAYER_NAME'
 
 
@@ -476,7 +502,11 @@ def get_departure_date(update, context):
 def create_registration_link(update, context):
     chat_id = update.effective_message.chat_id
     # TODO список game_id брать из модели
-    game_id = random.randint(111111, 999999)
+    #game_id = random.randint(111111, 999999)
+    if Game_in_Santa.objects.all().last().id_game in None:
+        game_id = 100000
+    else:
+        game_id = Game_in_Santa.objects.all().last().id_game + 1
 
     registration_link = f'{context.bot["link"]}?start={game_id}'
 
@@ -490,7 +520,7 @@ def create_registration_link(update, context):
     )
     context.user_data['game_id'] = game_id
     print(context.user_data)
-
+    save_new_game(context)
     return 'SELECT_BRANCH'
 
 
