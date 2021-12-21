@@ -14,10 +14,13 @@ from telegram.ext import CommandHandler, MessageHandler, CallbackQueryHandler, M
 from telegram import ReplyKeyboardMarkup
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
 import phonenumbers
+from telegram_bot_calendar import DetailedTelegramCalendar, LSTEP
+from telegram_bot_calendar.base import DAY
 from random import randint
 from typing import Optional
 import random
-from datetime import datetime
+from datetime import datetime, date, timedelta
+from pprint import pprint
 
 #import django
 
@@ -427,76 +430,78 @@ def get_cost_limit(update, context):
     chat_id = update.effective_message.chat_id
     user_message = update.message.text
     context.user_data['cost_limit'] = user_message
+
+    class WMonthTelegramCalendar(DetailedTelegramCalendar):
+        first_step = DAY
+
+    calendar, step = WMonthTelegramCalendar(min_date=date.today()).build()
     context.bot.send_message(
         chat_id=chat_id,
-        text='Введите дату окончания регистрации участников'
-             ' (до 12.00 МСК) в формате ДД-ММ-ГГГГ, например 31-12-2021',
-        reply_markup=telegram.ReplyKeyboardRemove()
+        text='Выберите дату окончания регистрации участников (до 12.00 МСК)',
+        reply_markup=calendar,
     )
     return 'GET_REGISTRATION_PERIOD'
 
 
+def get_calendar_date(update, context):
+    chat_id = update.effective_message.chat_id
+    callback_data = update.callback_query.data
+    result, key, step = DetailedTelegramCalendar(
+        min_date=date.today()
+    ).process(callback_data)
+
+    if not result and key:
+        context.bot.send_message(
+            chat_id=chat_id,
+            text=f"Выберите день",
+            reply_markup=key,
+        )
+    elif result:
+        buttons = [f'Выбрать {result}']
+        markup = keyboard_maker(buttons, 1)
+        context.bot.send_message(
+            chat_id=chat_id,
+            text=f"Отлично, подтвердите дату",
+            reply_markup=markup,
+
+        )
+        context.user_data['calendar_date'] = result
+
+
 def get_registration_period(update, context):
     chat_id = update.effective_message.chat_id
-    user_message = update.message.text
 
-    try:
-        registration_period = datetime.strptime(user_message, '%d-%m-%Y')
+    context.user_data['registration_period'] = context.user_data['calendar_date']
+    context.user_data.pop('calendar_date')
 
-        if registration_period < datetime.now():
-            context.bot.send_message(
-                chat_id=chat_id,
-                text='Прошлая или текущая дата не может быть установлена!\n'
-                     'Введи дату в формате ДД-ММ-ГГГГ, например 31-12-2021',
-            )
-            return 'GET_REGISTRATION_PERIOD'
+    class WMonthTelegramCalendar(DetailedTelegramCalendar):
+        first_step = DAY
 
-        context.user_data['registration_period'] = registration_period
-        context.bot.send_message(
-            chat_id=chat_id,
-            text='Дата отправки подарка?\n'
-                 'Введи дату в формате ДД-ММ-ГГГГ, например 01-01-2022',
-        )
-        return 'GET_DEPARTURE_DATE'
-
-    except ValueError:
-        context.bot.send_message(
-            chat_id=chat_id,
-            text='Неверная дата!\n'
-                 'Введи дату в формате ДД-ММ-ГГГГ, например 31-12-2021',
-        )
-        return 'GET_REGISTRATION_PERIOD'
+    calendar, step = WMonthTelegramCalendar(
+        min_date=context.user_data['registration_period'] + timedelta(days=1),
+    ).build()
+    context.bot.send_message(
+        chat_id=chat_id,
+        text='Дата отправки подарка?',
+        reply_markup=calendar,
+    )
+    return 'GET_DEPARTURE_DATE'
 
 
 def get_departure_date(update, context):
     chat_id = update.effective_message.chat_id
-    user_message = update.message.text
 
-    try:
-        departure_date = datetime.strptime(user_message, '%d-%m-%Y')
-        context.user_data['departure_date'] = departure_date
-        if departure_date <= context.user_data['registration_period']:
-            context.bot.send_message(
-                chat_id=chat_id,
-                text='Неверная дата!\n'
-                     f'Дата должна быть быть позже окончания регистрации',
-            )
-            return 'GET_DEPARTURE_DATE'
-        buttons = ['Получить ссылку для регистрации']
-        markup = keyboard_maker(buttons, 1)
-        context.bot.send_message(
-            chat_id=chat_id,
-            text='Отлично, Тайный Санта уже готовится к раздаче подарков!',
-            reply_markup=markup
-        )
-        return 'CREATE_REGISTRATION_LINK'
-    except ValueError:
-        context.bot.send_message(
-            chat_id=chat_id,
-            text='Неверная дата!\n'
-                 'Введи дату в формате ДД-ММ-ГГГГ, например 01-01-2022',
-        )
-        return 'GET_DEPARTURE_DATE'
+    context.user_data['departure_date'] = context.user_data['calendar_date']
+    context.user_data.pop('calendar_date')
+
+    buttons = ['Получить ссылку для регистрации']
+    markup = keyboard_maker(buttons, 1)
+    context.bot.send_message(
+        chat_id=chat_id,
+        text='Отлично, Тайный Санта уже готовится к раздаче подарков!',
+        reply_markup=markup
+    )
+    return 'CREATE_REGISTRATION_LINK'
 
 
 def create_registration_link(update, context):
@@ -656,6 +661,7 @@ class Command(BaseCommand):
         )
 
         dispatcher.add_handler(conv_handler)
+        dispatcher.add_handler(CallbackQueryHandler(get_calendar_date))
 
         updater.start_polling()
         updater.idle()
