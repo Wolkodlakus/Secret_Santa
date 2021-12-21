@@ -258,7 +258,7 @@ def check_game(update, context):
     chat_id = update.effective_message.chat_id
     user_message = update.message.text
     print(int(user_message))
-    print(int(context.user_data.get('game_id')))
+    # print(int(context.user_data.get('game_id')))
     try:
         game = Game_in_Santa.objects.get(id_game=int(user_message))
         buttons = ['Продолжить']
@@ -269,6 +269,11 @@ def check_game(update, context):
             reply_markup=markup,
         )
         context.user_data['game_id'] = game.id_game
+        context.user_data['game_id'] = game.id_game
+        context.user_data['game_name'] = game.name_game
+        context.user_data['cost_limit'] = game.price_range
+        context.user_data['registration_period'] = game.last_day_and_time_of_registration
+        context.user_data['departure_date'] = game.draw_time
         return 'SHOW_GAME_INFO'
     except ObjectDoesNotExist:
         buttons = ['Создать игру', 'Вступить в игру']
@@ -302,13 +307,27 @@ def check_game(update, context):
 
 def show_game_info(update, context):
     chat_id = update.effective_message.chat_id
-
+    reply_wish = ''
+    user = User_telegram.objects.get(external_id=chat_id)
+    wishlist = user.wishlist_user.all()
+    for wish in wishlist:
+        reply_wish += f'{wish}\n'
+    if reply_wish:
+        reply_wish = '===== Твой вишлист =====\n' + reply_wish
+    users = User_telegram.objects.filter(games__id_game=context.user_data['game_id'])
+    reply_users = ''
+    for user in users:
+        reply_users += f'{user.name} {user.last_name} {user.username}\n'
+    if reply_users:
+        reply_users = '===== Участники =====\n' + reply_users
     context.bot.send_message(
         chat_id=chat_id,
         text=f'Название игры: {context.user_data["game_name"]}\n'
              f'Ограничение стоимости: {context.user_data["cost_limit"]}\n'
              f'Период регистрации до: {context.user_data["registration_period"]}\n'
-             f'Дата отправки подарков: {context.user_data["departure_date"]}'
+             f'Дата отправки подарков: {context.user_data["departure_date"]}\n'
+             f'{reply_wish}\n'
+             f'{reply_users}'
     )
     reply_markup = telegram.ReplyKeyboardMarkup([[telegram.KeyboardButton(
         'Поделиться номером телефона',
