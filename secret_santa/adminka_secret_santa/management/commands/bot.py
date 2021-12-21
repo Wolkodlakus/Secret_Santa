@@ -18,7 +18,7 @@ from random import randint
 from typing import Optional
 import random
 from datetime import datetime
-from django.utils.timezone import make_aware
+from django.utils import timezone
 
 #import django
 
@@ -446,9 +446,14 @@ def get_registration_period(update, context):
     user_message = update.message.text
 
     try:
+        current_tz = timezone.get_current_timezone()
         registration_period = datetime.strptime(user_message, '%d-%m-%Y')
-
-        if registration_period < datetime.now():
+        registration_period_tz =current_tz.localize(registration_period)
+        #print(f'registration_period: {registration_period}')
+        #print(f'registration_period_tz: {registration_period_tz}')
+        #print(f'datetime.now() {datetime.now()}')
+        #print(f'timezone.now() {timezone.now()}')
+        if registration_period_tz < timezone.now():
             context.bot.send_message(
                 chat_id=chat_id,
                 text='Прошлая или текущая дата не может быть установлена!\n'
@@ -456,8 +461,8 @@ def get_registration_period(update, context):
             )
             return 'GET_REGISTRATION_PERIOD'
 
-        #context.user_data['registration_period'] = make_aware(registration_period) #Попытка решить проблему с наивной датой
-        context.user_data['registration_period'] = registration_period
+
+        context.user_data['registration_period'] = registration_period_tz
         context.bot.send_message(
             chat_id=chat_id,
             text='Дата отправки подарка?\n'
@@ -480,8 +485,10 @@ def get_departure_date(update, context):
 
     try:
         departure_date = datetime.strptime(user_message, '%d-%m-%Y')
-        context.user_data['departure_date'] = departure_date
-        if departure_date <= context.user_data['registration_period']:
+        current_tz = timezone.get_current_timezone()
+        departure_date_tz = current_tz.localize(departure_date)
+        context.user_data['departure_date'] = departure_date_tz
+        if departure_date_tz <= context.user_data['registration_period']:
             context.bot.send_message(
                 chat_id=chat_id,
                 text='Неверная дата!\n'
