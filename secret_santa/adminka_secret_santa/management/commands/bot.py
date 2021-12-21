@@ -21,9 +21,6 @@ from datetime import datetime
 from django.utils import timezone
 
 #import django
-
-
-
 #os.environ['DJANGO_SETTINGS_MODULE'] = 'secret_santa.settings'
 #django.setup()
 from django.core.management.base import BaseCommand
@@ -122,7 +119,8 @@ def keyboard_maker(buttons, number):
 
 def start(update, context):
     chat_id = update.effective_message.chat_id
-    create_test_game(context)
+    #create_test_game(context)
+
     p, _ = User_telegram.objects.get_or_create(
         external_id = chat_id,
         defaults = {
@@ -135,7 +133,8 @@ def start(update, context):
     game_id = update.message.text[7:]
     if game_id:
         print('game_id', game_id)
-        context.user_data['game_id'] = game_id
+        load_to_context(game_id,context)
+        #context.user_data['game_id'] = game_id
         buttons = ['Продолжить']
         markup = keyboard_maker(buttons, 1)
         context.bot.send_message(
