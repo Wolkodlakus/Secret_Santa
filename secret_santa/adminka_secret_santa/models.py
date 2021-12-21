@@ -18,18 +18,17 @@ class Game_in_Santa(models.Model):
     )
     price_range = models.TextField(
         verbose_name='Диапазон стоимости подарка',
+        blank=True
     )
-    last_day = models.TextField(
-        verbose_name='Дата окончания регистрации',
+
+    last_day_and_time_of_registration = models.DateTimeField(
+        verbose_name='Последний день и час регистрации',
+        blank=True
     )
-    last_day_and_time_of_registration = models.TextField(
-        verbose_name='Последний день и час регистрации'
-    )
-    draw_day = models.TextField(
-        verbose_name='Дата раздачи подарков'
-    )
+
     draw_time = models.DateTimeField(
-        verbose_name='Дата и время раздачи подарков'
+        verbose_name='Дата и время раздачи подарков',
+        blank=True
     )
     created_at = models.DateTimeField(
         verbose_name='Когда создана игра',

@@ -18,6 +18,7 @@ from random import randint
 from typing import Optional
 import random
 from datetime import datetime
+from django.utils.timezone import make_aware
 
 #import django
 
@@ -55,19 +56,23 @@ def load_to_context(id_game,context):
         context.user_data['creator_username'] = game.organizer.username
         context.user_data['game_name'] = game.name
         context.user_data['cost_limit'] = game.price_range
-        context.user_data['registration_period'] = game.last_day
-        context.user_data['departure_date'] = game.draw_day
+        context.user_data['registration_period'] = game.last_day_and_time_of_registration
+        context.user_data['departure_date'] = game.draw_time
 
     except ObjectDoesNotExist:
         pass
 
 def save_new_game(context):
-    game = Game_in_Santa.objects.create(id_game=context.user_data['game_id'])
-    game.name = context.user_data['game_name']
-    game.price_range = context.user_data['cost_limit']
-    game.last_day = context.user_data['registration_period']
-    game.draw_day = context.user_data['departure_date']
-    game.organizer = User_telegram.objects.get(telephone_number=context.user_data['creator_telephone_number'])
+    print(context.user_data)
+    print('='*80)
+    game = Game_in_Santa.objects.create(
+        id_game=context.user_data['game_id'],
+        name_game=context.user_data['game_name'],
+        price_range=context.user_data['cost_limit'],
+        last_day_and_time_of_registration=context.user_data['registration_period'],
+        draw_time=context.user_data['departure_date'],
+        organizer=User_telegram.objects.get(telephone_number=context.user_data['creator_telephone_number']),
+    )
     game.save()
 
 
@@ -256,7 +261,7 @@ def check_game(update, context):
     print(int(user_message))
     print(int(context.user_data.get('game_id')))
     try:
-        id_game = Game_in_Santa.id_game.objects.get(int(user_message))
+        game = Game_in_Santa.objects.get(id_game=int(user_message))
         buttons = ['Продолжить']
         markup = keyboard_maker(buttons, 1)
         context.bot.send_message(
@@ -264,7 +269,7 @@ def check_game(update, context):
             text=' Вы присоединились к игре! Поздравляем!',
             reply_markup=markup,
         )
-        context.user_data['game_id'] = id_game
+        context.user_data['game_id'] = game.id_game
         return 'SHOW_GAME_INFO'
     except ObjectDoesNotExist:
         buttons = ['Создать игру', 'Вступить в игру']
@@ -451,6 +456,7 @@ def get_registration_period(update, context):
             )
             return 'GET_REGISTRATION_PERIOD'
 
+        #context.user_data['registration_period'] = make_aware(registration_period) #Попытка решить проблему с наивной датой
         context.user_data['registration_period'] = registration_period
         context.bot.send_message(
             chat_id=chat_id,
