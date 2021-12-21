@@ -48,10 +48,10 @@ def load_to_context(id_game,context):
     try:
         game = Game_in_Santa.objects.get(id_game=id_game)
         context.user_data['game_id'] = id_game
-        context.user_data['creator_telephone_number'] = game.organizer.organizer.telephone_number
+        context.user_data['creator_telephone_number'] = game.organizer.telephone_number
         context.user_data['creator_first_name'] = game.organizer.name
         context.user_data['creator_username'] = game.organizer.username
-        context.user_data['game_name'] = game.name
+        context.user_data['game_name'] = game.name_game
         context.user_data['cost_limit'] = game.price_range
         context.user_data['registration_period'] = game.last_day_and_time_of_registration
         context.user_data['departure_date'] = game.draw_time
@@ -90,14 +90,16 @@ def save_creator_user(update,context):
 def save_player_user (update,context):
     chat_id = update.effective_message.chat_id
     user = User_telegram.objects.get(external_id= chat_id)
+
     for item in context.user_data['wish_list']:
-        user.wishlist.create(name=item)
+        user.wishlist_user.create(name=item)
 
     user.letter = context.user_data['letter']
     user.name = context.user_data['player_first_name']
     user.user_name = context.user_data['player_username']
     user.telephone_number = context.user_data['player_telephone_number']
-    user.games.objects.add(Game_in_Santa.objects.filter(id_game=context.user_data['game_id']))
+    game = Game_in_Santa.objects.get(id_game=context.user_data['game_id'])
+    user.games.add(game)
     #user.interest_user =
     #user.wishes_user =
     user.save()
@@ -172,6 +174,7 @@ def select_branch(update, context):
             text='Введи свой номер телефона или нажми кнопку',
             reply_markup=reply_markup,
         )
+        print(reply_markup)
         return 'GET_CREATOR_CONTACT'
 
     if user_message == 'Вступить в игру':
@@ -237,7 +240,7 @@ def get_letter_for_santa(update, context):
         reply_markup=markup,
     )
     print(context.user_data)
-
+    save_player_user(update, context)
     return 'SELECT_BRANCH'
 
 
@@ -325,9 +328,12 @@ def show_game_info(update, context):
 
 def get_creator_contact(update, context):
     user = update.message.from_user
+    print(user)
+    print(update)
     chat_id = update.effective_message.chat_id
     if update.message.contact is not None:
-        user_phone_number = update.message.contact.phone_number
+
+        user_phone_number = update.message.contact["phone_number"]
         context.user_data['creator_telephone_number'] = user_phone_number
     else:
         user_phone_number = update.message.text
@@ -336,7 +342,7 @@ def get_creator_contact(update, context):
             reply_markup = telegram.ReplyKeyboardMarkup([[telegram.KeyboardButton(
                 'Поделиться номером телефона',
                 request_contact=True,
-            )]])
+            )]], resize_keyboard=True, one_time_keyboard=True)
 
             context.bot.send_message(
                 chat_id=chat_id,
@@ -345,6 +351,8 @@ def get_creator_contact(update, context):
                      '"+7 (123) 456-78-90" или нажми кнопку',
                 reply_markup=reply_markup,
             )
+
+
             return 'GET_CREATOR_CONTACT'
         context.user_data['creator_telephone_number'] = user_phone_number
         if correct_phone_number != user_phone_number:
@@ -393,7 +401,8 @@ def get_player_contact(update, context):
                 chat_id=chat_id,
                 text=f'Ваш номер телефона: {correct_phone_number}',
             )
-
+    print(user.first_name)
+    print(user.username)
     context.user_data['player_first_name'] = user.first_name
     context.user_data['player_username'] = user.username
 
@@ -404,7 +413,6 @@ def get_player_contact(update, context):
         text='Введите ваше имя в игре или нажмите кнопку',
         reply_markup=markup,
     )
-    save_player_user(update,context)
     return 'GET_PLAYER_NAME'
 
 
