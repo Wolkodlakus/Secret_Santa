@@ -4,7 +4,7 @@ import os
 import time
 import telegram
 from telegram import (Bot, Update, ReplyKeyboardMarkup, ReplyKeyboardRemove,
-                      KeyboardButton, ReplyKeyboardMarkup)
+                      KeyboardButton, ReplyKeyboardMarkup, ForceReply)
 from telegram.ext import (ConversationHandler, Filters, CallbackContext, Updater,
                           CommandHandler, MessageHandler, CallbackQueryHandler, MessageHandler)
 from telegram.utils.request import Request
@@ -63,6 +63,7 @@ def load_to_context(id_game, context):
 
 
 def save_new_game(context):
+    print(context.user_data)
     game = Game_in_Santa.objects.create(
         id_game=context.user_data['game_id'],
         name_game=context.user_data['game_name'],
@@ -154,15 +155,11 @@ def select_branch(update, context):
     chat_id = update.effective_message.chat_id
     user_message = update.message.text
     if user_message == 'Создать игру':
-        reply_markup = telegram.ReplyKeyboardMarkup([[telegram.KeyboardButton(
-            'Поделиться номером телефона',
-            request_contact=True,
-        )]])
-
-        context.bot.send_message(
-            chat_id=chat_id,
-            text='Введи свой номер телефона или нажми кнопку',
-            reply_markup=reply_markup,
+        update.message.reply_text(
+            'Введи свой номер телефона:',
+            reply_markup=ForceReply(force_reply=True,
+                                    input_field_placeholder='Телефон',
+                                    selective=True)
         )
         return 'GET_CREATOR_CONTACT'
 
@@ -173,7 +170,7 @@ def select_branch(update, context):
         )
         return 'CHECK_GAME'
     if update.message.text[7:]:
-        return 'start'
+        start(update, context)
 
 
 def get_player_name(update, context):
@@ -305,25 +302,23 @@ def show_game_info(update, context):
              f'{reply_wish}\n'
              f'{reply_users}'
     )
-    reply_markup = telegram.ReplyKeyboardMarkup([[telegram.KeyboardButton(
-        'Поделиться номером телефона',
-        request_contact=True,
-    )]])
-
-    context.bot.send_message(
-        chat_id=chat_id,
-        text='Введи свой номер телефона или нажми кнопку',
-        reply_markup=reply_markup,
+    update.message.reply_text(
+        'Введи свой номер телефона:',
+        reply_markup=ForceReply(force_reply=True,
+                                input_field_placeholder='Телефон',
+                                selective=True)
     )
+
     return 'GET_PLAYER_CONTACT'
 
 
 def get_creator_contact(update, context):
+    print(update.message)
     user = update.message.from_user
 
     chat_id = update.effective_message.chat_id
     if update.message.contact is not None:
-        #user_phone_number = update.message.contact.phone_number
+        user_phone_number = update.message.contact.phone_number
         user_phone_number = update.message.contact["phone_number"]
         context.user_data['creator_telephone_number'] = user_phone_number
     else:
@@ -333,8 +328,7 @@ def get_creator_contact(update, context):
             reply_markup = telegram.ReplyKeyboardMarkup([[telegram.KeyboardButton(
                 'Поделиться номером телефона',
                 request_contact=True,
-            )]], resize_keyboard=True, one_time_keyboard=True)
-
+            )]])
             context.bot.send_message(
                 chat_id=chat_id,
                 text='Неверно введен номер!\n'
@@ -476,6 +470,7 @@ def get_registration_period(update, context):
     calendar, step = WMonthTelegramCalendar(
         min_date=context.user_data['registration_period'] + timedelta(days=1),
     ).build()
+
     context.bot.send_message(
         chat_id=chat_id,
         text='Дата отправки подарка?',
@@ -510,17 +505,18 @@ def create_registration_link(update, context):
     #registration_link = f'{context.bot["link"]}?start={game_id}'
     registration_link=helpers.create_deep_linked_url(bot.username, str(game_id))
 
-    buttons = ['Создать игру', 'Вступить в игру']
-    markup = keyboard_maker(buttons, 2)
+    #buttons = ['Создать игру', 'Вступить в игру']
+    #markup = keyboard_maker(buttons, 2)
     context.bot.send_message(
         chat_id=chat_id,
         text='Вот ссылка для приглашения участников игры, по которой '
              f'они смогут зарегистрироваться: {registration_link}',
-        reply_markup=markup,
+
     )
     context.user_data['game_id'] = game_id
     save_new_game(context)
-    return 'SELECT_BRANCH'
+    print('Сохранение прошло нормально')
+    start(update, context)
 
 
 def handle_user_reply(update: Update, context: CallbackContext):
@@ -630,7 +626,10 @@ def bot_starting():
             'GET_LETTER_FOR_SANTA': [MessageHandler(Filters.text, get_letter_for_santa)],
             'SHOW_GAME_INFO': [MessageHandler(Filters.text, show_game_info)],
         },
-        fallbacks=[CommandHandler('cancel', cancel)],
+        fallbacks=[
+            CommandHandler("cancel", cancel),
+            CommandHandler("start", start),
+        ],
     )
 
     dispatcher.add_handler(conv_handler)
@@ -648,7 +647,7 @@ def toss_up_checker():
         for game in games:
             now_datetime = timezone.now()
             if not game.draw:
-                if game.draw_time < now_datetime:
+                if game.draw_time + timedelta(hours=15) < now_datetime:
                     toss_up_game(game.id_game)
         time.sleep(100)
 
