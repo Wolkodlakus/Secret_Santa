@@ -36,7 +36,7 @@ class Game_in_Santa(models.Model):
     )
     #gamers = models.ManyToManyField(User_telegram)
     def __str__(self):
-        return f'Игра #{self.pk} {self.name} от {self.organizer}. {self.price_range} до {self.last_day_and_time_of_registration}. Раздача {self.draw_time}'
+        return f'Игра #{self.pk} {self.name_game} от {self.organizer}. {self.price_range} до {self.last_day_and_time_of_registration}. Раздача {self.draw_time}'
 
     class Meta:
         verbose_name = 'Игра в Тайного Санту'

@@ -14,11 +14,14 @@ from telegram.ext import CommandHandler, MessageHandler, CallbackQueryHandler, M
 from telegram import ReplyKeyboardMarkup
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
 import phonenumbers
+from telegram_bot_calendar import DetailedTelegramCalendar, LSTEP
+from telegram_bot_calendar.base import DAY
 from random import randint
 from typing import Optional
 import random
-from datetime import datetime
+from datetime import datetime, date, timedelta
 from django.utils import timezone
+from pprint import pprint
 
 #import django
 #os.environ['DJANGO_SETTINGS_MODULE'] = 'secret_santa.settings'
@@ -272,6 +275,10 @@ def check_game(update, context):
             reply_markup=markup,
         )
         context.user_data['game_id'] = game.id_game
+        context.user_data['game_name'] = game.name_game
+        context.user_data['cost_limit'] = game.price_range
+        context.user_data['registration_period'] = game.last_day_and_time_of_registration
+        context.user_data['departure_date'] = game.draw_time
         return 'SHOW_GAME_INFO'
     except ObjectDoesNotExist:
         buttons = ['Создать игру', 'Вступить в игру']
@@ -305,13 +312,27 @@ def check_game(update, context):
 
 def show_game_info(update, context):
     chat_id = update.effective_message.chat_id
-
+    reply_wish = ''
+    user = User_telegram.objects.get(external_id=chat_id)
+    wishlist = user.wishlist_user.all()
+    for wish in wishlist:
+        reply_wish += f'{wish}\n'
+    if reply_wish:
+        reply_wish = '===== Твой вишлист =====\n' + reply_wish
+    users = User_telegram.objects.filter(games__id_game=context.user_data['game_id'])
+    reply_users = ''
+    for user in users:
+        reply_users += f'{user.name} {user.last_name} {user.username}\n'
+    if reply_users:
+        reply_users = '===== Участники =====\n' + reply_users
     context.bot.send_message(
         chat_id=chat_id,
         text=f'Название игры: {context.user_data["game_name"]}\n'
              f'Ограничение стоимости: {context.user_data["cost_limit"]}\n'
              f'Период регистрации до: {context.user_data["registration_period"]}\n'
-             f'Дата отправки подарков: {context.user_data["departure_date"]}'
+             f'Дата отправки подарков: {context.user_data["departure_date"]}\n'
+             f'{reply_wish}\n'
+             f'{reply_users}'
     )
     reply_markup = telegram.ReplyKeyboardMarkup([[telegram.KeyboardButton(
         'Поделиться номером телефона',
@@ -332,7 +353,7 @@ def get_creator_contact(update, context):
     print(update)
     chat_id = update.effective_message.chat_id
     if update.message.contact is not None:
-
+        #user_phone_number = update.message.contact.phone_number
         user_phone_number = update.message.contact["phone_number"]
         context.user_data['creator_telephone_number'] = user_phone_number
     else:
@@ -436,9 +457,25 @@ def get_game_name(update, context):
 
 
 def get_cost_limit(update, context):
+    
+    #календарь?
     chat_id = update.effective_message.chat_id
     user_message = update.message.text
     context.user_data['cost_limit'] = user_message
+
+    class WMonthTelegramCalendar(DetailedTelegramCalendar):
+        first_step = DAY
+
+    calendar, step = WMonthTelegramCalendar(min_date=date.today()).build()
+    context.bot.send_message(
+        chat_id=chat_id,
+        text='Выберите дату окончания регистрации участников (до 12.00 МСК)',
+        reply_markup=calendar,
+	)
+    return 'GET_REGISTRATION_PERIOD'
+    """
+	chat_id = update.effective_message.chat_id
+    user_message = update.message.text
     context.bot.send_message(
         chat_id=chat_id,
         text='Введите дату окончания регистрации участников'
@@ -446,9 +483,51 @@ def get_cost_limit(update, context):
         reply_markup=telegram.ReplyKeyboardRemove()
     )
     return 'GET_REGISTRATION_PERIOD'
+    """
+
+def get_calendar_date(update, context):
+    chat_id = update.effective_message.chat_id
+    callback_data = update.callback_query.data
+    result, key, step = DetailedTelegramCalendar(
+        min_date=date.today()
+    ).process(callback_data)
+    if not result and key:
+        context.bot.send_message(
+            chat_id=chat_id,
+            text=f"Выберите день",
+            reply_markup=key,
+        )
+    elif result:
+        buttons = [f'Выбрать {result}']
+        markup = keyboard_maker(buttons, 1)
+        context.bot.send_message(
+            chat_id=chat_id,
+            text=f"Отлично, подтвердите дату",
+            reply_markup=markup,
+
+        )
+        context.user_data['calendar_date'] = result
+
 
 
 def get_registration_period(update, context):
+    chat_id = update.effective_message.chat_id
+    context.user_data['registration_period'] = context.user_data['calendar_date']
+    context.user_data.pop('calendar_date')
+
+    class WMonthTelegramCalendar(DetailedTelegramCalendar):
+        first_step = DAY
+
+    calendar, step = WMonthTelegramCalendar(
+        min_date=context.user_data['registration_period'] + timedelta(days=1),
+    ).build()
+    context.bot.send_message(
+        chat_id=chat_id,
+        text='Дата отправки подарка?',
+        reply_markup=calendar,
+    )
+    return 'GET_DEPARTURE_DATE'
+    """
     chat_id = update.effective_message.chat_id
     user_message = update.message.text
 
@@ -484,9 +563,25 @@ def get_registration_period(update, context):
                  'Введи дату в формате ДД-ММ-ГГГГ, например 31-12-2021',
         )
         return 'GET_REGISTRATION_PERIOD'
+	"""
 
 
 def get_departure_date(update, context):
+    chat_id = update.effective_message.chat_id
+
+    context.user_data['departure_date'] = context.user_data['calendar_date']
+    context.user_data.pop('calendar_date')
+
+    buttons = ['Получить ссылку для регистрации']
+    markup = keyboard_maker(buttons, 1)
+    context.bot.send_message(
+        chat_id=chat_id,
+        text='Отлично, Тайный Санта уже готовится к раздаче подарков!',
+        reply_markup=markup
+    )
+    return 'CREATE_REGISTRATION_LINK'
+    
+    """
     chat_id = update.effective_message.chat_id
     user_message = update.message.text
 
@@ -517,7 +612,7 @@ def get_departure_date(update, context):
                  'Введи дату в формате ДД-ММ-ГГГГ, например 01-01-2022',
         )
         return 'GET_DEPARTURE_DATE'
-
+	"""
 
 def create_registration_link(update, context):
     chat_id = update.effective_message.chat_id
@@ -676,6 +771,8 @@ class Command(BaseCommand):
         )
 
         dispatcher.add_handler(conv_handler)
+        
+        dispatcher.add_handler(CallbackQueryHandler(get_calendar_date))
 
         updater.start_polling()
         updater.idle()
