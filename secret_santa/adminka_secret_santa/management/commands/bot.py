@@ -170,7 +170,7 @@ def select_branch(update, context):
         )
         return 'CHECK_GAME'
     if update.message.text[7:]:
-        start(update, context)
+        return 'start'
 
 
 def get_player_name(update, context):
@@ -505,8 +505,8 @@ def create_registration_link(update, context):
     #registration_link = f'{context.bot["link"]}?start={game_id}'
     registration_link=helpers.create_deep_linked_url(bot.username, str(game_id))
 
-    #buttons = ['Создать игру', 'Вступить в игру']
-    #markup = keyboard_maker(buttons, 2)
+    buttons = ['Создать игру', 'Вступить в игру']
+    markup = keyboard_maker(buttons, 2)
     context.bot.send_message(
         chat_id=chat_id,
         text='Вот ссылка для приглашения участников игры, по которой '
@@ -516,7 +516,7 @@ def create_registration_link(update, context):
     context.user_data['game_id'] = game_id
     save_new_game(context)
     print('Сохранение прошло нормально')
-    start(update, context)
+    return 'start'
 
 
 def handle_user_reply(update: Update, context: CallbackContext):
