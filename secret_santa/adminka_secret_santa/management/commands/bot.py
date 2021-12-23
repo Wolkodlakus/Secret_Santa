@@ -117,37 +117,39 @@ def keyboard_maker(buttons, number):
 
 def start(update, context):
     chat_id = update.effective_message.chat_id
-    p, _ = User_telegram.objects.get_or_create(
-        external_id=chat_id,
-        defaults={
-            'name': '',
-            'last_name': '',
-            'username': '',
-            'telephone_number': ''
-        }
-    )
-    game_id = update.message.text[7:]
-    if game_id:
-        load_to_context(game_id, context)
-        buttons = ['Продолжить']
-        markup = keyboard_maker(buttons, 1)
+    print()
+    if update.message.text[1] != 'с':
+        p, _ = User_telegram.objects.get_or_create(
+            external_id=chat_id,
+            defaults={
+                'name': '',
+                'last_name': '',
+                'username': '',
+                'telephone_number': ''
+            }
+        )
+        game_id = update.message.text[7:]
+        if game_id and update.message.text[1] == 's':
+            load_to_context(game_id, context)
+            buttons = ['Продолжить']
+            markup = keyboard_maker(buttons, 1)
+            context.bot.send_message(
+                chat_id=chat_id,
+                text=' Вы присоединились к игре! Поздравляем!',
+                reply_markup=markup,
+            )
+
+            return 'SHOW_GAME_INFO'
+        chat_id = update.effective_message.chat_id
+
+        buttons = ['Создать игру', 'Вступить в игру']
+        markup = keyboard_maker(buttons, 2)
         context.bot.send_message(
             chat_id=chat_id,
-            text=' Вы присоединились к игре! Поздравляем!',
+            text=' Организуй или присоединись к тайному обмену подарками,'
+                 ' запусти праздничное настроение!',
             reply_markup=markup,
         )
-
-        return 'SHOW_GAME_INFO'
-    chat_id = update.effective_message.chat_id
-
-    buttons = ['Создать игру', 'Вступить в игру']
-    markup = keyboard_maker(buttons, 2)
-    context.bot.send_message(
-        chat_id=chat_id,
-        text=' Организуй или присоединись к тайному обмену подарками,'
-             ' запусти праздничное настроение!',
-        reply_markup=markup,
-    )
 
     return 'SELECT_BRANCH'
 
@@ -568,6 +570,8 @@ def create_registration_link(update, context):
     context.user_data['game_id'] = game_id
     save_new_game(context)
     print('Сохранение прошло нормально')
+    if update.message.text[1] != 'с':
+        return 'SELECT_BRANCH'
     return 'start1'
 
 
