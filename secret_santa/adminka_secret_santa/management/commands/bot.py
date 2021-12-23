@@ -170,7 +170,7 @@ def select_branch(update, context):
         )
         return 'CHECK_GAME'
     if update.message.text[7:]:
-        return 'start'
+        return 'start1'
 
 
 def get_player_name(update, context):
@@ -516,7 +516,7 @@ def create_registration_link(update, context):
     context.user_data['game_id'] = game_id
     save_new_game(context)
     print('Сохранение прошло нормально')
-    return 'start'
+    return 'start1'
 
 
 def handle_user_reply(update: Update, context: CallbackContext):
@@ -612,6 +612,7 @@ def bot_starting():
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
         states={
+            'start1': [MessageHandler(Filters.text, start)],
             'GET_CREATOR_CONTACT': [MessageHandler(Filters.text, get_creator_contact)],
             'GET_PLAYER_CONTACT': [MessageHandler(Filters.text, get_player_contact)],
             'GET_GAME_NAME': [MessageHandler(Filters.text, get_game_name)],
