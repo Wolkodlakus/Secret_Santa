@@ -62,6 +62,7 @@ def load_to_context(id_game, context):
         pass
 
 
+
 def save_new_game(context):
     print(context.user_data)
     game = Game_in_Santa.objects.create(
@@ -155,13 +156,36 @@ def select_branch(update, context):
     chat_id = update.effective_message.chat_id
     user_message = update.message.text
     if user_message == 'Создать игру':
-        update.message.reply_text(
-            'Введи свой номер телефона:',
-            reply_markup=ForceReply(force_reply=True,
-                                    input_field_placeholder='Телефон',
-                                    selective=True)
-        )
-        return 'GET_CREATOR_CONTACT'
+        try:
+            if User_telegram.objects.get(external_id=chat_id).telephone_number:
+                user = update.message.from_user
+                context.user_data['creator_first_name'] = user.first_name
+                context.user_data['creator_username'] = user.username
+                context.user_data['creator_telephone_number'] = User_telegram.objects.get(
+                    external_id=chat_id).telephone_number
+                context.bot.send_message(
+                    chat_id=chat_id,
+                    text='Введите название игры',
+                    reply_markup=telegram.ReplyKeyboardRemove(),
+                )
+                save_creator_user(update, context)
+                return 'GET_GAME_NAME'
+            else:
+                update.message.reply_text(
+                    'Введи свой номер телефона:',
+                    reply_markup=ForceReply(force_reply=True,
+                                            input_field_placeholder='Телефон',
+                                            selective=True)
+                )
+                return 'GET_CREATOR_CONTACT'
+        except ObjectDoesNotExist:
+            update.message.reply_text(
+                'Введи свой номер телефона:',
+                reply_markup=ForceReply(force_reply=True,
+                                        input_field_placeholder='Телефон',
+                                        selective=True)
+            )
+            return 'GET_CREATOR_CONTACT'
 
     if user_message == 'Вступить в игру':
         context.bot.send_message(
@@ -302,14 +326,42 @@ def show_game_info(update, context):
              f'{reply_wish}\n'
              f'{reply_users}'
     )
-    update.message.reply_text(
-        'Введи свой номер телефона:',
-        reply_markup=ForceReply(force_reply=True,
-                                input_field_placeholder='Телефон',
-                                selective=True)
-    )
 
-    return 'GET_PLAYER_CONTACT'
+    try:
+        if User_telegram.objects.get(external_id=chat_id).telephone_number:
+            user = update.message.from_user
+            context.user_data['player_first_name'] = user.first_name
+            context.user_data['player_username'] = user.username
+            context.user_data['player_telephone_number'] = User_telegram.objects.get(
+                external_id=chat_id).telephone_number
+            buttons = [user.first_name]
+            markup = keyboard_maker(buttons, 1)
+            context.bot.send_message(
+                chat_id=chat_id,
+                text='Введите ваше имя в игре или нажмите кнопку',
+                reply_markup=markup,
+            )
+            return 'GET_PLAYER_NAME'
+        else:
+            update.message.reply_text(
+                'Введи свой номер телефона:',
+                reply_markup=ForceReply(force_reply=True,
+                                        input_field_placeholder='Телефон',
+                                        selective=True)
+            )
+
+            return 'GET_PLAYER_CONTACT'
+    except ObjectDoesNotExist:
+        update.message.reply_text(
+            'Введи свой номер телефона:',
+            reply_markup=ForceReply(force_reply=True,
+                                    input_field_placeholder='Телефон',
+                                    selective=True)
+        )
+
+        return 'GET_PLAYER_CONTACT'
+
+
 
 
 def get_creator_contact(update, context):
@@ -511,7 +563,7 @@ def create_registration_link(update, context):
         chat_id=chat_id,
         text='Вот ссылка для приглашения участников игры, по которой '
              f'они смогут зарегистрироваться: {registration_link}',
-
+        reply_markup=markup,
     )
     context.user_data['game_id'] = game_id
     save_new_game(context)
