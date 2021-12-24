@@ -646,17 +646,26 @@ def toss_up_game(id_game):
     users = User_telegram.objects.filter(games__id_game=id_game)
     random.shuffle(users)
     toss_up_list = []
-    toss_up = Toss_up.objects.add(
+    toss_up = Toss_up.objects.create(
         game=game
     )
-    for number_current_user in users[:-1]:
-        toss_up.donators_set.add(users[number_current_user])
-        toss_up.donees_set.add(users[number_current_user+1])
-        toss_up_list.append([users[number_current_user].external_id, users[number_current_user+1].external_id])
-    toss_up.donators_set.add(users[-1])
-    toss_up.donees_set.add(users[1])
-    toss_up_list.append([users[-1].external_id, users[1].external_id])
-    send_santa_massage(toss_up_list)
+    if users.count() > 1:
+        for number_current_user in users[:(users.count()-1)]:
+            toss_up.donators_set.add(users[number_current_user])
+            toss_up.donees_set.add(users[number_current_user+1])
+            toss_up_list.append([users[number_current_user].external_id, users[number_current_user+1].external_id])
+        print(toss_up)
+        toss_up.donators.add(users[users.count()-1])
+        toss_up.donees.add(users[0])
+        toss_up_list.append([users[users.count()-1].external_id, users[0].external_id])
+        send_santa_massage(toss_up_list)
+    elif users.count() == 1:
+        text = f"""
+            Жеребьевка не проведена! Всего один участник
+            """
+        bot.send_message(chat_id=users[0].external_id, text=text)
+
+
     toss_up.save()
     game.save()
 
